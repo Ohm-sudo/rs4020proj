@@ -1,25 +1,49 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const uri = "mongodb+srv://angelocabacungan:T8HLAYjpyDtd1trW@cluster0.03l3j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const mongoose = require('mongoose');
+const fs = require('fs');
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
+const uri = "mongodb+srv://angelocabacungan:T8HLAYjpyDtd1trW@cluster0.03l3j.mongodb.net/ChatGPT_Evaluation?retryWrites=true&w=majority&appName=Cluster0";
+
+// Define a schema for your collection
+const historySchema = new mongoose.Schema({
+  _id: Number,
+  question: String,
+  A: String,
+  B: String,
+  C: String,
+  D: String,
+  correctAnswer: String,
+  chatGPTResponse: String // Field for ChatGPT's response
+}, { collection: 'History' }); // Explicitly set the collection name to 'History'
+
+// Create a model based on the schema
+const History = mongoose.model('History', historySchema);
 
 async function run() {
   try {
-    // Connect the client to the server    (optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // Connect to MongoDB using Mongoose
+    await mongoose.connect(uri, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("Connected to MongoDB using Mongoose!");
+
+    // Read and parse the JSON file
+    const data = JSON.parse(fs.readFileSync('data/historyData.json', 'utf8'));
+
+    // Iterate over the data and upsert each document
+    for (const doc of data) {
+      await History.updateOne(
+        { _id: doc._id },
+        { $set: doc },
+        { upsert: true }
+      );
+      console.log(`Document with _id: ${doc._id} was inserted/updated`);
+    }
+
   } finally {
-    // Ensures that the client will close when you finish/error
-    await client.close();
+    // Close the Mongoose connection
+    await mongoose.connection.close();
   }
 }
-run().catch(console.dir);
+
+run().catch(console.error);
