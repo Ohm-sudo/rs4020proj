@@ -1,49 +1,110 @@
+const express = require('express');
 const mongoose = require('mongoose');
-const fs = require('fs');
+const path = require('path');
+const Computer_Security = require('./schemas'); // Import schema
+const { OpenAI } = require('openai'); // Correct import
+const cors = require('cors'); // For cross-origin requests
 
-const uri = "mongodb+srv://angelocabacungan:T8HLAYjpyDtd1trW@cluster0.03l3j.mongodb.net/ChatGPT_Evaluation?retryWrites=true&w=majority&appName=Cluster0";
+const app = express();
+const port = 3000;
 
-// Define a schema for your collection
-const historySchema = new mongoose.Schema({
-  _id: Number,
-  question: String,
-  A: String,
-  B: String,
-  C: String,
-  D: String,
-  correctAnswer: String,
-  chatGPTResponse: String // Field for ChatGPT's response
-}, { collection: 'History' }); // Explicitly set the collection name to 'History'
+const openai = new OpenAI({
+  apiKey: 'sk-OqemR8KRPQPzuw2V28Mo-MUivgwbmm_j9Qt4oF787ST3BlbkFJeS8H9aLvWGoKCtQDXgDAoZe8Kk1Aafl5Zz9TgQdtAA', // Replace with your OpenAI API key
+});
 
-// Create a model based on the schema
-const History = mongoose.model('History', historySchema);
+// MongoDB connection URL
+const uri = "mongodb+srv://angelocabacungan:T8HLAYjpyDtd1trW@cluster0.03l3j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-async function run() {
+// Connect to MongoDB
+mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((error) => console.error('MongoDB connection error:', error));
+
+// Middleware
+app.use(express.json());
+app.use(cors());
+
+// Serve static files from the root directory (no public folder)
+app.use(express.static(__dirname)); // Serves files from the root folder
+
+// Serve index.html when accessing the root URL
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html')); // Serve index.html from root
+});
+
+// Route to fetch a random question
+app.get('/random-question', async (req, res) => {
   try {
-    // Connect to MongoDB using Mongoose
-    await mongoose.connect(uri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+    const count = await Computer_Security.countDocuments(); // Count total documents
+    const randomIndex = Math.floor(Math.random() * count);
+    const question = await Computer_Security.findOne().skip(randomIndex); // Fetch random question
+    
+    res.status(200).json({
+      _id: question._id, // Include the ID in the response
+      question: question.question,
+      A: question.A,
+      B: question.B,
+      C: question.C,
+      D: question.D,
+      correctAnswer: question.correctAnswer,
     });
-    console.log("Connected to MongoDB using Mongoose!");
+  } catch (error) {
+    console.error('Error retrieving random question:', error);
+    res.status(500).json({ message: 'Error retrieving random question' });
+  }
+});
 
-    // Read and parse the JSON file
-    const data = JSON.parse(fs.readFileSync('data/historyData.json', 'utf8'));
+// Route to get ChatGPT response
 
-    // Iterate over the data and upsert each document
-    for (const doc of data) {
-      await History.updateOne(
-        { _id: doc._id },
-        { $set: doc },
-        { upsert: true }
-      );
-      console.log(`Document with _id: ${doc._id} was inserted/updated`);
+app.post('/chatgpt-response', async (req, res) => {
+  const { _id, question, A, B, C, D } = req.body;
+
+  if (!_id || !question || !A || !B || !C || !D) {
+    return res.status(400).json({ message: 'Question ID, question, and all options are required' });
+  }
+
+  try {
+    // Create a formatted prompt including the question and options
+    const prompt = `
+    Question: ${question}
+
+    Options:
+    A: ${A}
+    B: ${B}
+    C: ${C}
+    D: ${D}
+
+    Please select the correct option (A, B, C, or D).
+    `;
+
+    // Send the formatted prompt to ChatGPT
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const chatGPTResponse = response.choices[0].message.content.trim();
+
+    // Update the document in the database with the ChatGPT response
+    const updatedDocument = await Computer_Security.findByIdAndUpdate(
+      _id, // Use the document's ID to find it
+      { chatGPTResponse }, // Update the `chatGPTResponse` field
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedDocument) {
+      return res.status(404).json({ message: 'Document not found' });
     }
 
-  } finally {
-    // Close the Mongoose connection
-    await mongoose.connection.close();
+    res.status(200).json({ chatGPTResponse, updatedDocument });
+  } catch (error) {
+    console.error('Error with ChatGPT API or MongoDB update:', error);
+    res.status(500).json({ message: 'Error with ChatGPT API or updating the document' });
   }
-}
+});
 
-run().catch(console.error);
+
+// Start the server
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});

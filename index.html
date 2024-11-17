@@ -2,9 +2,122 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Hello World Page</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Question Validator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    #question-container {
+      margin-bottom: 20px;
+    }
+    #response, #validationResult {
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello, world! Good evening</h1>
+  <h1>Random Question</h1>
+  
+  <!-- Button to fetch a random question -->
+  <button id="fetchQuestion">Get Random Question</button>
+
+  <!-- Display the fetched question -->
+  <div id="question-container">
+    <p><strong>Question ID:</strong> <span id="questionId"></span></p>
+    <p><strong>Question:</strong> <span id="question"></span></p>
+    <p><strong>Option A:</strong> <span id="optionA"></span></p>
+    <p><strong>Option B:</strong> <span id="optionB"></span></p>
+    <p><strong>Option C:</strong> <span id="optionC"></span></p>
+    <p><strong>Option D:</strong> <span id="optionD"></span></p>
+    <p><strong>Correct Answer:</strong> <span id="correctAnswer"></span></p>
+  </div>  
+
+  <!-- Button to validate the answer with ChatGPT -->
+  <button id="validateAnswer" disabled>Validate Answer</button>
+
+  <!-- Display the ChatGPT response -->
+  <div id="response"></div>
+
+  <!-- Display if the response is correct -->
+  <div id="validationResult"></div>
+
+  <!-- Script to interact with the server -->
+  <script>
+    const fetchQuestionButton = document.getElementById('fetchQuestion');
+    const validateAnswerButton = document.getElementById('validateAnswer');
+    const questionElement = document.getElementById('question');
+    const optionAElement = document.getElementById('optionA');
+    const optionBElement = document.getElementById('optionB');
+    const optionCElement = document.getElementById('optionC');
+    const optionDElement = document.getElementById('optionD');
+    const correctAnswerElement = document.getElementById('correctAnswer');
+    const responseElement = document.getElementById('response');
+    
+    let currentQuestion = null;
+
+    // Fetch a random question
+    fetchQuestionButton.addEventListener('click', async () => {
+  try {
+    const response = await fetch('http://localhost:3000/random-question');
+    if (!response.ok) {
+      throw new Error('Error fetching question');
+    }
+    const data = await response.json();
+
+    // Display the question and options
+    currentQuestion = data;
+    document.getElementById('questionId').textContent = data._id; // Display the question ID
+    questionElement.textContent = data.question;
+    optionAElement.textContent = data.A;
+    optionBElement.textContent = data.B;
+    optionCElement.textContent = data.C;
+    optionDElement.textContent = data.D;
+    correctAnswerElement.textContent = data.correctAnswer;
+
+    // Enable the "Validate Answer" button
+    validateAnswerButton.disabled = false;
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to fetch question');
+  }
+});
+
+
+    // Validate the answer with ChatGPT
+    validateAnswerButton.addEventListener('click', async () => {
+      if (!currentQuestion) return;
+
+      try {
+        const response = await fetch('http://localhost:3000/chatgpt-response', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            _id: currentQuestion._id,
+            question: currentQuestion.question,
+            A: currentQuestion.A,
+            B: currentQuestion.B,
+            C: currentQuestion.C,
+            D: currentQuestion.D,
+            })
+
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message);
+        }
+
+        // Display ChatGPT's response
+        responseElement.textContent = `ChatGPT Response: ${result.chatGPTResponse}`;
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to validate answer');
+      }
+    });
+  </script>
 </body>
 </html>
