@@ -1,3 +1,5 @@
+require('dotenv').config(); // Loads up the .env processor
+
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
@@ -9,7 +11,7 @@ const app = express();
 const port = 3000;
 
 const openai = new OpenAI({
-  apiKey: 'sk-OqemR8KRPQPzuw2V28Mo-MUivgwbmm_j9Qt4oF787ST3BlbkFJeS8H9aLvWGoKCtQDXgDAoZe8Kk1Aafl5Zz9TgQdtAA', // Replace with your OpenAI API key
+  apiKey: process.env.OPENAI_API_KEY, // References the .env file
 });
 
 // MongoDB connection URL
