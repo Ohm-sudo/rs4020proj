@@ -107,7 +107,7 @@ app.post('/chatgpt-response', async (req, res) => {
       return res.status(404).json({ message: 'Document not found' });
     }
 
-    res.status(200).json({ chatGPTResponse, updatedDocument });
+    res.status(200).json({ chatGPTResponse, updatedDocument, responseTime });
   } catch (error) {
     console.error('Error with ChatGPT API or MongoDB update:', error);
     res.status(500).json({ message: 'Error with ChatGPT API or updating the document' });
