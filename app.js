@@ -79,11 +79,20 @@ app.post('/chatgpt-response', async (req, res) => {
     Please select the correct option (A, B, C, or D).
     `;
 
+    // Record start time of query
+    const startTime = Date.now();
+
     // Send the formatted prompt to ChatGPT
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [{ role: 'user', content: prompt }],
     });
+
+    // Record end time of query
+    const endTime = Date.now();
+
+    // Calculate response time
+    const responseTime = endTime - startTime;
 
     const chatGPTResponse = response.choices[0].message.content.trim();
 

@@ -9,7 +9,8 @@ const computerSecuritySchema = new mongoose.Schema({
   C: String,
   D: String,
   correctAnswer: String,
-  chatGPTResponse: String
+  chatGPTResponse: String,
+  responseTime: Number
 }, { collection: 'Computer_Security' });
 
 const Computer_Security = mongoose.model('Computer_Security', computerSecuritySchema);

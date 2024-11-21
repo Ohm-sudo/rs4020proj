@@ -31,6 +31,7 @@
     <p><strong>Option C:</strong> <span id="optionC"></span></p>
     <p><strong>Option D:</strong> <span id="optionD"></span></p>
     <p><strong>Correct Answer:</strong> <span id="correctAnswer"></span></p>
+    <p><strong>Response Time:</strong> <span id="responseTime"></span></p>
   </div>  
 
   <!-- Button to validate the answer with ChatGPT -->
@@ -53,6 +54,7 @@
     const optionDElement = document.getElementById('optionD');
     const correctAnswerElement = document.getElementById('correctAnswer');
     const responseElement = document.getElementById('response');
+    const responseTimeElement = document.getElementById('responseTime');
     
     let currentQuestion = null;
 
@@ -112,6 +114,7 @@
 
         // Display ChatGPT's response
         responseElement.textContent = `ChatGPT Response: ${result.chatGPTResponse}`;
+        responseTimeElement.textContent = `${result.responseTime} ms`; // Show the response time
         
       } catch (error) {
         console.error('Error:', error);
