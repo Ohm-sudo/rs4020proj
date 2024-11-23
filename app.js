@@ -1,121 +1,151 @@
-require('dotenv').config(); // Loads up the .env processor
+require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
-const Computer_Security = require('./schemas'); // Import schema
-const { OpenAI } = require('openai'); // Correct import
-const cors = require('cors'); // For cross-origin requests
+const cors = require('cors');
+const { OpenAI } = require('openai');
+const models = require('./schemas');
 
 const app = express();
 const port = 3000;
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // References the .env file
-});
+// OpenAI API setup
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// MongoDB connection URL
-const uri = "mongodb+srv://angelocabacungan:T8HLAYjpyDtd1trW@cluster0.03l3j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-
-// Connect to MongoDB
-mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
+// MongoDB setup
+const mongoURI = process.env.MONGODB_URI;
+mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
-  .catch((error) => console.error('MongoDB connection error:', error));
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 // Middleware
 app.use(express.json());
 app.use(cors());
+app.use(express.static(__dirname)); // Serve static files from root
 
-// Serve static files from the root directory (no public folder)
-app.use(express.static(__dirname)); // Serves files from the root folder
+// Serve index.html
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// Serve index.html when accessing the root URL
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html')); // Serve index.html from root
-});
+// Utility to send a prompt to ChatGPT
+const getChatGPTResponse = async (prompt) => {
+  const response = await openai.chat.completions.create({
+    model: 'gpt-3.5-turbo',
+    messages: [{ role: 'user', content: prompt }],
+  });
+  return response.choices[0].message.content.trim();
+};
 
-// Route to fetch a random question
+// Fetch a random question
 app.get('/random-question', async (req, res) => {
-  try {
-    const count = await Computer_Security.countDocuments(); // Count total documents
-    const randomIndex = Math.floor(Math.random() * count);
-    const question = await Computer_Security.findOne().skip(randomIndex); // Fetch random question
-    
-    res.status(200).json({
-      _id: question._id, // Include the ID in the response
-      question: question.question,
-      A: question.A,
-      B: question.B,
-      C: question.C,
-      D: question.D,
-      correctAnswer: question.correctAnswer,
-    });
-  } catch (error) {
-    console.error('Error retrieving random question:', error);
-    res.status(500).json({ message: 'Error retrieving random question' });
+  const { domain } = req.query;
+
+  if(!domain || !models[domain]) {
+    return res.status(400).json({ message: 'Invalid or missing domain'});
   }
-});
-
-// Route to get ChatGPT response
-
-app.post('/chatgpt-response', async (req, res) => {
-  const { _id, question, A, B, C, D } = req.body;
-
-  if (!_id || !question || !A || !B || !C || !D) {
-    return res.status(400).json({ message: 'Question ID, question, and all options are required' });
-  }
-
+  
   try {
-    // Create a formatted prompt including the question and options
-    const prompt = `
-    Question: ${question}
+    const Model = models[domain]; // Get the appropriate model
+    const count = await Model.countDocuments();
+    const randomQuestion = await Model.findOne().skip(Math.floor(Math.random() * count));
 
-    Options:
-    A: ${A}
-    B: ${B}
-    C: ${C}
-    D: ${D}
-
-    Please select the correct option (A, B, C, or D).
-    `;
-
-    // Record start time of query
-    const startTime = Date.now();
-
-    // Send the formatted prompt to ChatGPT
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: prompt }],
-    });
-
-    // Record end time of query
-    const endTime = Date.now();
-
-    // Calculate response time
-    const responseTime = endTime - startTime;
-
-    const chatGPTResponse = response.choices[0].message.content.trim();
-
-    // Update the document in the database with the ChatGPT response
-    const updatedDocument = await Computer_Security.findByIdAndUpdate(
-      _id, // Use the document's ID to find it
-      { chatGPTResponse }, // Update the `chatGPTResponse` field
-      { new: true } // Return the updated document
-    );
-
-    if (!updatedDocument) {
-      return res.status(404).json({ message: 'Document not found' });
+    if (!randomQuestion) {
+      return res.status(404).json({ message: 'No question found for the selected domain' });
     }
 
-    res.status(200).json({ chatGPTResponse, updatedDocument, responseTime });
-  } catch (error) {
-    console.error('Error with ChatGPT API or MongoDB update:', error);
-    res.status(500).json({ message: 'Error with ChatGPT API or updating the document' });
+    res.status(200).json(randomQuestion);
+  } catch (err) {
+    console.error('Error retrieving question:', err);
+    res.status(500).json({ message: 'Error retrieving question' });
   }
 });
 
+// Validate and update ChatGPT response for a single question
+app.post('/chatgpt-response', async (req, res) => {
+  const { domain, _id, question, A, B, C, D } = req.body;
+
+  if(!domain || !models[domain]) {
+    return res.status(400).json({ message: 'Invalid or missing domain' });
+  }
+
+  if (!_id || !question || !A || !B || !C || !D) {
+    return res.status(400).json({ message: 'Incomplete question data' });
+  }
+
+  try {
+    const Model = models[domain]; // Get the appropriate model based on the domain
+    const prompt = `
+      Question: ${question}
+      Options: A: ${A}, B: ${B}, C: ${C}, D: ${D}
+      Please select the correct option (A, B, C, or D).
+    `;
+
+    // Get the response from ChatGPT
+    const chatGPTResponse = await getChatGPTResponse(prompt);
+    
+    // Update the document in the correct collection (based on the domain)
+    const updatedDoc = await Model.findByIdAndUpdate(
+      _id,
+      { chatGPTResponse },
+      { new: true }
+    );
+
+    if (!updatedDoc) return res.status(404).json({ message: 'Document not found' });
+
+    res.status(200).json({ chatGPTResponse, updatedDoc });
+  } catch (err) {
+    console.error('Error processing ChatGPT response:', err);
+    res.status(500).json({ message: 'Error processing ChatGPT response' });
+  }
+});
+
+// Generate ChatGPT responses for all questions in batches
+app.get('/generate-chatgpt-responses', async (req, res) => {
+  const { domain } = req.query; // Get the domain from query parameters
+
+  if(!domain || !models[domain]) {
+    return res.status(400).json({ message: 'Invalid or missing domain' });
+  }
+
+  try {
+    const Model = models[domain]; // Get the appropriate model based on the domain
+    const questions = await Model.find();
+    if (!questions.length) return res.status(404).json({ message: 'No questions found.' });
+
+    const batchSize = 10;
+    const delayMs = 2000;
+
+    for (let i = 0; i < questions.length; i += batchSize) {
+      const batch = questions.slice(i, i + batchSize);
+
+      for (const { _id, question, A, B, C, D } of batch) {
+        const prompt = `
+          Question: ${question}
+          Options: A: ${A}, B: ${B}, C: ${C}, D: ${D}
+          Please select the correct option (A, B, C, or D).
+        `;
+
+        try {
+          const chatGPTResponse = await getChatGPTResponse(prompt);
+          await Model.findByIdAndUpdate(_id, { chatGPTResponse }, { new: true });
+          console.log(`Updated question ID: ${_id} in ${domain} domain`);
+        } catch (err) {
+          console.error(`Error processing question ID: ${_id} in ${domain} domain`, err);
+        }
+      }
+
+      if (i + batchSize < questions.length) {
+        console.log(`Waiting ${delayMs / 1000}s before the next batch...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    res.status(200).json({ message: 'ChatGPT responses updated for all questions.' });
+  } catch (err) {
+    console.error('Error generating responses:', err);
+    res.status(500).json({ message: 'Error generating responses' });
+  }
+});
 
 // Start the server
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+app.listen(port, () => console.log(`Server running at http://localhost:${port}`));

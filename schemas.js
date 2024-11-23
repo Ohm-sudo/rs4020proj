@@ -1,7 +1,7 @@
-// schemas.js
 const mongoose = require('mongoose');
 
-const computerSecuritySchema = new mongoose.Schema({
+// Common schema definition for all domains
+const questionSchema = new mongoose.Schema({
   _id: Number,
   question: String,
   A: String,
@@ -9,10 +9,17 @@ const computerSecuritySchema = new mongoose.Schema({
   C: String,
   D: String,
   correctAnswer: String,
-  chatGPTResponse: String,
-  responseTime: Number
-}, { collection: 'Computer_Security' });
+  chatGPTResponse: String, // Field for storing ChatGPT's response
+});
 
-const Computer_Security = mongoose.model('Computer_Security', computerSecuritySchema);
+// Models for different collections/domains
+const Computer_Security = mongoose.model('Computer_Security', questionSchema, 'Computer_Security');
+const History = mongoose.model('History', questionSchema, 'History');
+const Social_Science = mongoose.model('Social_Science', questionSchema, 'Social_Science');
 
-module.exports = Computer_Security; // Export the model directly
+// Export models as a map for convenience
+module.exports = {
+  Computer_Security,
+  History,
+  Social_Science,
+};
