@@ -9,47 +9,38 @@ const models = require('./schemas');
 
 const app = express();
 const port = 3000;
-
-// OpenAI API setup
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-// MongoDB setup
 const mongoURI = process.env.MONGODB_URI;
+
 mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('MongoDB connection error:', err));
 
-// Middleware
 app.use(express.json());
 app.use(cors());
 app.use(express.static(__dirname)); // Serve static files from root
-
-// Serve index.html
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-// Utility to send a prompt to ChatGPT
+// Helper function to validate domain
+const validateDomain = (domain) => models[domain];
+
+// Helper function to handle errors and send responses
+const handleError = (res, message, status = 400) => res.status(status).json({ message });
+
+// Get ChatGPT response
 const getChatGPTResponse = async (prompt) => {
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      max_tokens: 10, // Limit the response length to keep it short
+      max_tokens: 10,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const responseText = response.choices[0].message.content.trim();
-
-    // Try to match only the letter A, B, C, or D at the start of the response
-    const match = responseText.match(/^(Option\s)?[A-D](?=:|$)/);
-
-    if (match) {
-      return match[0]; // Return the matched option (A, B, C, or D)
-    } else {
-      console.log("No match found for the options (A, B, C, or D).");
-      return ''; // Return an empty string or handle differently
-    }
+    const match = response.choices[0].message.content.trim().match(/^(Option\s)?[A-D](?=:|$)/);
+    return match ? match[0] : '';
   } catch (error) {
-    console.error('Error while getting response from ChatGPT:', error);
-    return ''; // Return an empty string if there’s an error
+    console.error('Error getting response from ChatGPT:', error);
+    return '';
   }
 };
 
@@ -57,23 +48,16 @@ const getChatGPTResponse = async (prompt) => {
 app.get('/random-question', async (req, res) => {
   const { domain } = req.query;
 
-  if(!domain || !models[domain]) {
-    return res.status(400).json({ message: 'Invalid or missing domain'});
-  }
-  
+  if (!validateDomain(domain)) return handleError(res, 'Invalid or missing domain');
+
   try {
-    const Model = models[domain]; // Get the appropriate model
-    const count = await Model.countDocuments();
-    const randomQuestion = await Model.findOne().skip(Math.floor(Math.random() * count));
-
-    if (!randomQuestion) {
-      return res.status(404).json({ message: 'No question found for the selected domain' });
-    }
-
-    res.status(200).json(randomQuestion);
+    const Model = models[domain];
+    const randomQuestion = await Model.aggregate([{ $sample: { size: 1 } }]);
+    if (!randomQuestion.length) return handleError(res, 'No question found for the selected domain', 404);
+    res.status(200).json(randomQuestion[0]);
   } catch (err) {
     console.error('Error retrieving question:', err);
-    res.status(500).json({ message: 'Error retrieving question' });
+    handleError(res, 'Error retrieving question', 500);
   }
 });
 
@@ -81,73 +65,53 @@ app.get('/random-question', async (req, res) => {
 app.post('/chatgpt-response', async (req, res) => {
   const { domain, _id, question, A, B, C, D } = req.body;
 
-  if(!domain || !models[domain]) {
-    return res.status(400).json({ message: 'Invalid or missing domain' });
-  }
-
-  if (!_id || !question || !A || !B || !C || !D) {
-    return res.status(400).json({ message: 'Incomplete question data' });
-  }
+  if (!validateDomain(domain)) return handleError(res, 'Invalid or missing domain');
+  if (!_id || !question || !A || !B || !C || !D) return handleError(res, 'Incomplete question data');
 
   try {
-    const Model = models[domain]; // Get the appropriate model based on the domain
-    const prompt = `
-      Question: ${question}
-      Options: A: ${A}, B: ${B}, C: ${C}, D: ${D}
-      Please select the correct option (A, B, C, or D) only, without any explanation.
-    `;
+    const Model = models[domain];
+    const prompt = `Question: ${question} Options: A: ${A}, B: ${B}, C: ${C}, D: ${D} Please select the correct option (A, B, C, or D) only.`;
 
-    // Get the response from ChatGPT
     const chatGPTResponse = await getChatGPTResponse(prompt);
-    
-    // Update the document in the correct collection (based on the domain)
-    const updatedDoc = await Model.findByIdAndUpdate(
-      _id,
-      { chatGPTResponse },
-      { new: true }
-    );
+    const questionDoc = await Model.findById(_id);
+    if (!questionDoc) return handleError(res, 'Document not found', 404);
 
-    if (!updatedDoc) return res.status(404).json({ message: 'Document not found' });
+    const accuracy = chatGPTResponse === questionDoc.correctAnswer ? 'Correct' : 'Incorrect';
+    const updatedDoc = await Model.findByIdAndUpdate(_id, { chatGPTResponse, accuracy }, { new: true });
 
-    res.status(200).json({ chatGPTResponse, updatedDoc });
+    res.status(200).json({ chatGPTResponse, accuracy, updatedDoc });
   } catch (err) {
     console.error('Error processing ChatGPT response:', err);
-    res.status(500).json({ message: 'Error processing ChatGPT response' });
+    handleError(res, 'Error processing ChatGPT response', 500);
   }
 });
 
 // Generate ChatGPT responses for all questions in batches
 app.get('/generate-chatgpt-responses', async (req, res) => {
-  const { domain } = req.query; // Get the domain from query parameters
+  const { domain } = req.query;
 
-  if(!domain || !models[domain]) {
-    return res.status(400).json({ message: 'Invalid or missing domain' });
-  }
+  if (!validateDomain(domain)) return handleError(res, 'Invalid or missing domain');
 
   try {
-    const Model = models[domain]; // Get the appropriate model based on the domain
+    const Model = models[domain];
     const questions = await Model.find();
-    if (!questions.length) return res.status(404).json({ message: 'No questions found.' });
+    if (!questions.length) return handleError(res, 'No questions found', 404);
 
     const batchSize = 10;
-    const delayMs = 2000;
+    const delayMs = 5000;
 
     for (let i = 0; i < questions.length; i += batchSize) {
       const batch = questions.slice(i, i + batchSize);
 
-      for (const { _id, question, A, B, C, D } of batch) {
-        const prompt = `
-          Question: ${question}
-          Options: A: ${A}, B: ${B}, C: ${C}, D: ${D}
-          Please select the correct option (A, B, C, or D) only, without any explanation.
-        `;
-
+      for (const { _id, question, A, B, C, D, correctAnswer } of batch) {
+        const prompt = `Question: ${question} Options: A: ${A}, B: ${B}, C: ${C}, D: ${D} Please select the correct option (A, B, C, or D) only.`;
         try {
           const chatGPTResponse = await getChatGPTResponse(prompt);
-          await Model.findByIdAndUpdate(_id, { chatGPTResponse }, { new: true });
-          console.log(`Updated question ID: ${_id} in ${domain} domain`);
+          const accuracy = chatGPTResponse === correctAnswer ? 'Correct' : 'Incorrect';
+          await Model.findByIdAndUpdate(_id, { chatGPTResponse, accuracy }, { new: true });
+          console.log(`Updated question ID: ${_id} in ${domain}`);
         } catch (err) {
-          console.error(`Error processing question ID: ${_id} in ${domain} domain`, err);
+          console.error(`Error processing question ID: ${_id}`, err);
         }
       }
 
@@ -160,9 +124,8 @@ app.get('/generate-chatgpt-responses', async (req, res) => {
     res.status(200).json({ message: 'ChatGPT responses updated for all questions.' });
   } catch (err) {
     console.error('Error generating responses:', err);
-    res.status(500).json({ message: 'Error generating responses' });
+    handleError(res, 'Error generating responses', 500);
   }
 });
 
-// Start the server
 app.listen(port, () => console.log(`Server running at http://localhost:${port}`));

@@ -10,6 +10,7 @@ const questionSchema = new mongoose.Schema({
   D: String,
   correctAnswer: String,
   chatGPTResponse: String, // Field for storing ChatGPT's response
+  accuracy: String,
 });
 
 // Models for different collections/domains
