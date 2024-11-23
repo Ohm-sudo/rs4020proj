@@ -11,24 +11,32 @@
     #question-container {
       margin-bottom: 20px;
     }
-    #response, #validationResult {
+    #response, #validationResult, #generateResponseResult {
       margin-top: 20px;
+    }
+    select, button {
+      margin: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>Random Question Validator</h1>
-
-  <!-- Dropdown for domain selection -->
-  <label for="domain">Select Domain:</label>
-  <select id="domain">
-    <option value="Computer_Security">Computer Security</option>
-    <option value="History">History</option>
-    <option value="Social_Science">Social Science</option>
-  </select>
+  <h1>Random Question</h1>
+  
+  <!-- Dropdown to select domain for generating responses -->
+  <div>
+    <label for="domainSelect">Select Domain:</label>
+    <select id="domainSelect">
+      <option value="Computer_Security">Computer Security</option>
+      <option value="Social_Science">Social Science</option>
+      <option value="History">History</option>
+    </select>
+  </div>
 
   <!-- Button to fetch a random question -->
   <button id="fetchQuestion">Get Random Question</button>
+
+  <!-- Button to generate ChatGPT responses for all questions in the selected domain -->
+  <button id="generateChatGPTResponses">Generate ChatGPT Responses</button>
 
   <!-- Display the fetched question -->
   <div id="question-container">
@@ -50,6 +58,9 @@
   <!-- Display if the response is correct -->
   <div id="validationResult"></div>
 
+  <!-- Display result of ChatGPT responses generation -->
+  <div id="generateResponseResult"></div>
+
   <!-- Script to interact with the server -->
   <script>
     const fetchQuestionButton = document.getElementById('fetchQuestion');
@@ -61,12 +72,14 @@
     const optionDElement = document.getElementById('optionD');
     const correctAnswerElement = document.getElementById('correctAnswer');
     const responseElement = document.getElementById('response');
+    const generateResponseResult = document.getElementById('generateResponseResult');
+    const domainSelect = document.getElementById('domainSelect');
     
     let currentQuestion = null;
 
     // Fetch a random question
     fetchQuestionButton.addEventListener('click', async () => {
-      const domain = document.getElementById('domain').value; // Get selected domain
+      const domain = domainSelect.value; // Get selected domain from the dropdown
       try {
         const response = await fetch(`http://localhost:3000/random-question?domain=${domain}`);
         if (!response.ok) {
@@ -92,9 +105,12 @@
       }
     });
 
+
     // Validate the answer with ChatGPT
     validateAnswerButton.addEventListener('click', async () => {
       if (!currentQuestion) return;
+
+      const domain = document.getElementById('domainSelect').value; // Get selected domain from the dropdown
 
       try {
         const response = await fetch('http://localhost:3000/chatgpt-response', {
@@ -103,13 +119,13 @@
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            domain: document.getElementById('domain').value, // Send domain as well
             _id: currentQuestion._id,
             question: currentQuestion.question,
             A: currentQuestion.A,
             B: currentQuestion.B,
             C: currentQuestion.C,
-            D: currentQuestion.D
+            D: currentQuestion.D,
+            domain: domain
           })
         });
 
@@ -124,6 +140,25 @@
       } catch (error) {
         console.error('Error:', error);
         alert('Failed to validate answer');
+      }
+    });
+
+    // Generate ChatGPT responses for all questions in the selected domain
+    document.getElementById('generateChatGPTResponses').addEventListener('click', async () => {
+      const selectedDomain = domainSelect.value; // Get selected domain from the dropdown
+      try {
+        const response = await fetch(`http://localhost:3000/generate-chatgpt-responses?domain=${selectedDomain}`);
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.message);
+        }
+
+        // Show success message
+        generateResponseResult.textContent = `Successfully generated ChatGPT responses for all questions in ${selectedDomain} domain.`;
+      } catch (error) {
+        console.error('Error generating responses:', error);
+        generateResponseResult.textContent = `Failed to generate ChatGPT responses for ${selectedDomain} domain.`;
       }
     });
   </script>

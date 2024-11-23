@@ -3,7 +3,6 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
-const cors = require('cors');
 const { OpenAI } = require('openai');
 const models = require('./schemas');
 
@@ -21,7 +20,6 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
 
 // Middleware
 app.use(express.json());
-app.use(cors());
 app.use(express.static(__dirname)); // Serve static files from root
 
 // Serve index.html
@@ -29,11 +27,28 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 // Utility to send a prompt to ChatGPT
 const getChatGPTResponse = async (prompt) => {
-  const response = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    messages: [{ role: 'user', content: prompt }],
-  });
-  return response.choices[0].message.content.trim();
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      max_tokens: 10, // Limit the response length to keep it short
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    const responseText = response.choices[0].message.content.trim();
+
+    // Try to match only the letter A, B, C, or D at the start of the response
+    const match = responseText.match(/^(Option\s)?[A-D](?=:|$)/);
+
+    if (match) {
+      return match[0]; // Return the matched option (A, B, C, or D)
+    } else {
+      console.log("No match found for the options (A, B, C, or D).");
+      return ''; // Return an empty string or handle differently
+    }
+  } catch (error) {
+    console.error('Error while getting response from ChatGPT:', error);
+    return ''; // Return an empty string if there’s an error
+  }
 };
 
 // Fetch a random question
@@ -77,7 +92,7 @@ app.post('/chatgpt-response', async (req, res) => {
     const prompt = `
       Question: ${question}
       Options: A: ${A}, B: ${B}, C: ${C}, D: ${D}
-      Please select the correct option (A, B, C, or D).
+      Please select the correct option (A, B, C, or D) only, without any explanation.
     `;
 
     // Get the response from ChatGPT
@@ -122,7 +137,7 @@ app.get('/generate-chatgpt-responses', async (req, res) => {
         const prompt = `
           Question: ${question}
           Options: A: ${A}, B: ${B}, C: ${C}, D: ${D}
-          Please select the correct option (A, B, C, or D).
+          Please select the correct option (A, B, C, or D) only, without any explanation.
         `;
 
         try {
