@@ -32,11 +32,10 @@ const getChatGPTResponse = async (prompt) => {
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
-      max_tokens: 10,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const match = response.choices[0].message.content.trim().match(/^(Option\s)?[A-D](?=:|$)/);
+    const match = response.choices[0].message.content.trim().match(/^[A-D](?=:|$)/);
     return match ? match[0] : '';
   } catch (error) {
     console.error('Error getting response from ChatGPT:', error);
