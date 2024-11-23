@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
+const cors = require('cors');
 const { OpenAI } = require('openai');
 const models = require('./schemas');
 
@@ -20,6 +21,7 @@ mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
 
 // Middleware
 app.use(express.json());
+app.use(cors());
 app.use(express.static(__dirname)); // Serve static files from root
 
 // Serve index.html
