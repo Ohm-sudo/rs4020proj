@@ -133,4 +133,39 @@ app.get('/generate-chatgpt-responses', async (req, res) => {
   }
 });
 
+// API route to calculate and return the average response time
+app.get('/average-response-time', async (req, res) => {
+  const { domain } = req.query;  // Expecting domain as query parameter
+
+  if (!validateDomain(domain)) return handleError(res, 'Invalid or missing domain');  // Validate domain
+
+  try {
+    const Model = models[domain];  // Get the correct model based on the domain
+
+    // Aggregate to calculate the average response time
+    const result = await Model.aggregate([
+      { $match: { responseTime: { $exists: true } } },  // Filter for documents with responseTime field
+      {
+        $group: {
+          _id: null,  // Group all documents together
+          averageResponseTime: { $avg: "$responseTime" }  // Calculate average of responseTime
+        }
+      }
+    ]);
+
+    // If no data exists, return an error message
+    if (result.length === 0) {
+      return res.status(404).json({ message: 'No response times found for the selected domain' });
+    }
+
+    // Send the average response time as a response
+    const averageResponseTime = result[0].averageResponseTime;
+    res.status(200).json({ domain, averageResponseTime });
+
+  } catch (error) {
+    console.error("Error fetching average response time:", error);
+    handleError(res, 'Error fetching average response time', 500);
+  }
+});
+
 app.listen(port, () => console.log(`Server running at http://localhost:${port}`));

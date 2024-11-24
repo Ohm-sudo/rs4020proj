@@ -96,3 +96,34 @@ document.getElementById('generateChatGPTResponses').addEventListener('click', as
     generateResponseResult.textContent = `Failed to generate ChatGPT responses for ${selectedDomain} domain.`;
     }
 });
+
+// Fetch and display the average response time
+async function fetchAverageResponseTime() {
+  const domainSelect = document.getElementById('domainSelect');  // Get the selected domain
+  const domain = domainSelect.value;
+
+  try {
+    // Fetch the average response time from the server
+    const response = await fetch(`/average-response-time?domain=${domain}`);
+    const data = await response.json();
+
+    // If successful, update the DOM with the result
+    if (response.ok) {
+      const avgTime = data.averageResponseTime;
+      const responseTimeElement = document.getElementById('average-response-time');
+      responseTimeElement.innerHTML = `<strong>Average Response Time for ${domain}:</strong> ${avgTime.toFixed(2)} ms`;
+    } else {
+      throw new Error(data.message);
+    }
+  } catch (error) {
+    console.error('Error fetching average response time:', error);
+    const responseTimeElement = document.getElementById('average-response-time');
+    responseTimeElement.textContent = 'Error fetching average response time';
+  }
+}
+
+// Call the function to display the average response time on page load
+document.addEventListener('DOMContentLoaded', fetchAverageResponseTime);
+
+// Optional: Re-fetch when the domain is changed
+document.getElementById('domainSelect').addEventListener('change', fetchAverageResponseTime);
