@@ -1,4 +1,4 @@
-﻿_id,question,A,B,C,D,correctAnswer,chatGPTResponse,accuracy
+﻿_id,question,A,B,C,D,correctAnswer,chatGPTResponse,accuracy,responseTime
 1,Which of the following styles of fuzzer is more likely to explore paths covering every line of code in the following program?,Generational,Blackbox,Whitebox,Mutation-based,C,,
 2,"Assume that a TLS connection has been established successfully between a client and a server. Establishing the session included checking the server certificate and executing a DiffieHelmann exchange, but the client did not provide a client certificate. Further, assume that the client and server are honest, that the client and server donâ€™t leak their keys, and that the cryptography is good. Which of the following attacks does TLS protect against?
 1. An attacker replaying bytes that a client sent earlier.

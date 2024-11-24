@@ -105,9 +105,15 @@ app.get('/generate-chatgpt-responses', async (req, res) => {
       for (const { _id, question, A, B, C, D, correctAnswer } of batch) {
         const prompt = `Question: ${question} Options: A: ${A}, B: ${B}, C: ${C}, D: ${D} Please select the correct option (A, B, C, or D) only.`;
         try {
+          const startTime = Date.now(); // Record start time
           const chatGPTResponse = await getChatGPTResponse(prompt);
+          const endTime = Date.now(); // Record end time
+          const responseTime = endTime - startTime;
+
           const accuracy = chatGPTResponse === correctAnswer ? 'Correct' : 'Incorrect';
-          await Model.findByIdAndUpdate(_id, { chatGPTResponse, accuracy }, { new: true });
+
+          // Updates the database with the ChatGPTResponse, Accuracy, and Response Time
+          await Model.findByIdAndUpdate(_id, { chatGPTResponse, accuracy, responseTime }, { new: true });
           console.log(`Updated question ID: ${_id} in ${domain}`);
         } catch (err) {
           console.error(`Error processing question ID: ${_id}`, err);
