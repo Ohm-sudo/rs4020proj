@@ -32,6 +32,9 @@ fetchQuestionButton.addEventListener('click', async () => {
     optionDElement.textContent = data.D;
     correctAnswerElement.textContent = data.correctAnswer;
 
+    // Clear previous ChatGPT response and response time
+    responseElement.innerHTML = '';
+
     // Enable the "Validate Answer" button
     validateAnswerButton.disabled = false;
     } catch (error) {
@@ -69,8 +72,11 @@ validateAnswerButton.addEventListener('click', async () => {
         throw new Error(result.message);
     }
 
-    // Display ChatGPT's response
-    responseElement.textContent = `ChatGPT Response: ${result.chatGPTResponse}`;
+    // Display ChatGPT's response and Response Time
+    responseElement.innerHTML = `
+    <p><strong>ChatGPT Response:</strong> ${result.chatGPTResponse}</p>
+    <p><strong>Response Time:</strong> ${result.responseTime} ms</p>
+`;    
     
     } catch (error) {
     console.error('Error:', error);

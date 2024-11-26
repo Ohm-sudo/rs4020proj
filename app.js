@@ -71,14 +71,17 @@ app.post('/chatgpt-response', async (req, res) => {
     const Model = models[domain];
     const prompt = `Question: ${question} Options: A: ${A}, B: ${B}, C: ${C}, D: ${D} Please select the correct option (A, B, C, or D) only.`;
 
+    const startTime = Date.now(); // Start time
     const chatGPTResponse = await getChatGPTResponse(prompt);
+    const responseTime = Date.now() - startTime;
+
     const questionDoc = await Model.findById(_id);
     if (!questionDoc) return handleError(res, 'Document not found', 404);
 
     const accuracy = chatGPTResponse === questionDoc.correctAnswer ? 'Correct' : 'Incorrect';
-    const updatedDoc = await Model.findByIdAndUpdate(_id, { chatGPTResponse, accuracy }, { new: true });
+    const updatedDoc = await Model.findByIdAndUpdate(_id, { chatGPTResponse, accuracy, responseTime }, { new: true });
 
-    res.status(200).json({ chatGPTResponse, accuracy, updatedDoc });
+    res.status(200).json({ chatGPTResponse, accuracy, responseTime, updatedDoc });
   } catch (err) {
     console.error('Error processing ChatGPT response:', err);
     handleError(res, 'Error processing ChatGPT response', 500);
