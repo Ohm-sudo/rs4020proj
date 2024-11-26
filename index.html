@@ -24,7 +24,8 @@
                                     </p>
 
                                     <p class="name">Shaun Pangilinan</p>
-                                    <p>I am in my fifth year at York University, majoring in Information Technology. My primary interests are cybersecurity, network security, and web development. For this project, I bring experience in JavaScript, HTML, and CSS.</p>
+                                    <p>I am currently in my fifth year at York University, majoring in Information Technology. My primary interests are cybersecurity, network security, and web development.</p>
+                                    <p>Throughout the IT program, I have gained hands-on experience in Java, HTML, CSS, Javascript and SQL.  Outside of school I have worked on several side projects that consist of using docker containers, API keys, and Skript. </p>
                                     <p class="contact">
                                         <a href="mailto:shaunbp123@gmail.com">Email</a> /
                                         <a href="https://github.com/shaunbp/">GitHub</a>
@@ -35,7 +36,7 @@
                                         <img src="pictures/rohmeC.png" alt="Rohme Cabacungan" class="profile-photo">
                                     </a>
                                     <a href="pictures/shaunP.jpg">
-                                        <img src="pictures/shaunP.jpg" alt="Shawn Pangilinan" class="profile-photo">
+                                        <img src="pictures/shaunP.jpg" alt="Shaun Pangilinan" class="profile-photo">
                                     </a>
                                 </td>
                             </tr>
@@ -46,23 +47,41 @@
                         <h1 class="section-title">Projects</h1>
                         <article>
                             <h2>Measuring ChatGPT Efficiency</h2>
-                            <p>The purpose of this project is to <strong>evaluate the efficiency of ChatGPT</strong> in answering questions from domains such as <strong>History, Social Science, and Computer Security</strong>.</p>
+                            <p>This project has two goals.  Our first goal is to <strong>evaluate the efficiency of ChatGPT</strong> in answering questions from various domains such as <strong>History, Social Science, and Computer Security</strong>, while also <strong>measuring its response time and accuracy </strong>.</p>
+                            <p>Our second goal is to design and implement an <strong>Interactive Website</strong> that will <strong>document our research, integrate data processing, display data visualizations, and provide insight on ChatGPT's performance</strong>.</p>
                             <div class="project-details">
                                 <h3>Research Approach</h3>
+                                <p>To evaluate ChatGPT's efficiency in responding to domain-specific questions, these are the tools, technologies, and libraries used:</p>
                                 <ul>
-                                    <li>Created a <strong>GitHub repository</strong> to host web content.</li>
-                                    <li>Synced changes using <strong>GitHub Desktop</strong>.</li>
-                                    <li>Used <strong>Node.js, Express.js, Mongoose</strong> for dynamic content.</li>
-                                    <li>Utilized <strong>MongoDB Atlas</strong> for cloud-based data storage.</li>
-                                    <li>Integrated a <strong>ChatGPT API</strong> for database interaction.</li>
+                                    <li><strong>GitHub Repository:</strong> used to host web content and store project files.</li>
+                                    <li><strong>GitHub Desktop:</strong> used to sync changes to the repository.</li>
+                                    <li><strong>MongoDB Atlas:</strong> cloud-based database used to store questions, ChatGPT's responses, and response time.</li>
+                                    <li><strong>MongoDB Atlas Charts:</strong> data visualization (pie charts, bar charts, etc.).</li>
+                                    <li><strong>OpenAI API:</strong> for sending ChatGPT our questions and retrieving its answers to be used for evaluation.</li>
+                                    <li><strong>Node.js:</strong> for server-side environment creation.</li>
+                                    <li><strong>Express.js:</strong> a web framework for Node.js.</li>
+                                    <li><strong>Mongoose:</strong> library to define schemas and connect MongoDB and Node.js together.</li>
                                 </ul>
 
                                 <h3>Dataset Overview</h3>
-                                <ul>
-                                    <li>Domains: <strong>History, Social Science, Computer Security</strong>.</li>
-                                    <li>50 questions per domain, stored in a MongoDB database called <strong>ChatGPT_Evaluation</strong>.</li>
-                                    <li>Each question includes fields such as <strong>_id</strong>, <strong>question</strong>, <strong>options (A, B, C, D)</strong>, <strong>correctAnswer</strong>, and <strong>chatGPTResponse</strong>.</li>
-                                </ul>
+                                <p>Our dataset consists of questions from three different domains:
+                                    <ul>
+                                        <li><strong>History</strong></li>
+                                        <li><strong>Social Science</strong></li>
+                                        <li><strong>Computer Security</strong></li>
+                                    </ul>
+                                    Each domain consists of <strong>50 multiple choice questions</strong>, stored in the MongoDB database titled <strong>ChatGPT_Evaluation</strong>.
+                                </p>
+                                <p>Each question includes fields such as:
+                                    <ul>
+                                        <li><strong>_id</strong></li>
+                                        <li><strong>question</strong></li>
+                                        <li><strong>options (A, B, C, D)</strong></li>
+                                        <li><strong>correctAnswer</strong></li>
+                                        <li><strong>chatGPTResponse</strong></li>
+                                    </ul>
+                                    The purpose of these evaluations is to assess <strong>ChatGPT's performance and efficiency</strong> in generating accurate answers.  
+                                </p>
                             </div>
                         </article>
                     </section>
@@ -79,8 +98,8 @@
                         </div>
 
                         <div class="buttons">
-                            <button id="fetchQuestion">Get Random Question</button>
-                            <button id="generateChatGPTResponses">Generate ChatGPT Responses</button>
+                            <button id="fetchQuestion">Ask Random Question</button>
+                            <button id="generateChatGPTResponses">Run ChatGPT Evaluation</button>
                         </div>
 
                         <div id="question-container">
@@ -91,7 +110,7 @@
                             <p><strong>Option C:</strong> <span id="optionC"></span></p>
                             <p><strong>Option D:</strong> <span id="optionD"></span></p>
                             <p><strong>Correct Answer:</strong> <span id="correctAnswer"></span></p>
-                            <button id="validateAnswer" disabled>Validate Answer</button>
+                            <button id="validateAnswer" disabled>Get ChatGPT's Answer</button>
                             <div id="response"></div>
                             <div id="validationResult"></div>
                         </div>
@@ -99,7 +118,6 @@
 
                     <section class="results">
                         <h2>Results</h2>
-                        <p id="average-response-time">Average Response Time: Loading...</p>
                         <iframe src="https://charts.mongodb.com/charts-project-0-wounplb/embed/dashboards?id=72778ef6-2180-46e4-b515-42af7d05f1c6&theme=light" 
                                 class="chart"></iframe>
                         <iframe src="https://charts.mongodb.com/charts-project-0-wounplb/embed/dashboards?id=701ef367-b763-417f-a63a-ce1222f7877b&theme=light&autoRefresh=true&maxDataAge=3600&showTitleAndDesc=false&scalingWidth=fixed&scalingHeight=fixed"
