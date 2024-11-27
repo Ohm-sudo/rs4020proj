@@ -154,7 +154,7 @@ app.get('/generate-chatgpt-responses', async (req, res) => {
     handleError(res, 'Error generating responses', 500);
   }
 });
-
+// NOT USED ANYMORE SINCE WE HAVE ATLAS CHARTS TO DISPLAY AVG RESPONSE TIME
 // Calculate and return the Average Response Time
 app.get('/average-response-time', async (req, res) => {
   const { domain } = req.query;
