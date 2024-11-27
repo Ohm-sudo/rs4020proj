@@ -22,9 +22,9 @@ fetchQuestionButton.addEventListener('click', async () => {
     }
     const data = await response.json();
 
-    // Display the question and options
+    // Display the question and options onto the website
     currentQuestion = data;
-    document.getElementById('questionId').textContent = data._id; // Display the question ID
+    document.getElementById('questionId').textContent = data._id;
     questionElement.textContent = data.question;
     optionAElement.textContent = data.A;
     optionBElement.textContent = data.B;
@@ -48,7 +48,8 @@ fetchQuestionButton.addEventListener('click', async () => {
 validateAnswerButton.addEventListener('click', async () => {
     if (!currentQuestion) return;
 
-    const domain = document.getElementById('domainSelect').value; // Get selected domain from the dropdown
+    // Get selected domain from the dropdown
+    const domain = document.getElementById('domainSelect').value;
 
     try {
     const response = await fetch('http://localhost:3000/chatgpt-response', {
@@ -72,7 +73,7 @@ validateAnswerButton.addEventListener('click', async () => {
         throw new Error(result.message);
     }
 
-    // Display ChatGPT's response and Response Time
+    // Display ChatGPT's response and Response Time on the website
     responseElement.innerHTML = `
     <p><strong>ChatGPT Response:</strong> ${result.chatGPTResponse}</p>
     <p><strong>Response Time:</strong> ${result.responseTime} ms</p>
