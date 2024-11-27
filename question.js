@@ -1,3 +1,4 @@
+// Elements to display on the website
 const fetchQuestionButton = document.getElementById('fetchQuestion');
 const validateAnswerButton = document.getElementById('validateAnswer');
 const questionElement = document.getElementById('question');
@@ -16,6 +17,7 @@ let currentQuestion = null;
 fetchQuestionButton.addEventListener('click', async () => {
     const domain = domainSelect.value; // Get selected domain from the dropdown
     try {
+      // Fetches a random question
     const response = await fetch(`http://localhost:3000/random-question?domain=${domain}`);
     if (!response.ok) {
         throw new Error('Error fetching question');
@@ -89,6 +91,7 @@ validateAnswerButton.addEventListener('click', async () => {
 document.getElementById('generateChatGPTResponses').addEventListener('click', async () => {
     const selectedDomain = domainSelect.value; // Get selected domain from the dropdown
     try {
+    // Generate responses for all questions
     const response = await fetch(`http://localhost:3000/generate-chatgpt-responses?domain=${selectedDomain}`);
 
     const result = await response.json();
@@ -104,17 +107,19 @@ document.getElementById('generateChatGPTResponses').addEventListener('click', as
     }
 });
 
+// THIS CODE ISN'T BEING USED ANYMORE
+// AVG RESPONSE TIME IS DISPLAYED THROUGH THE CHARTS
 // Fetch and display the average response time
 async function fetchAverageResponseTime() {
-  const domainSelect = document.getElementById('domainSelect');  // Get the selected domain
-  const domain = domainSelect.value;
+  const domainSelect = document.getElementById('domainSelect');
+  const domain = domainSelect.value; // Get the selected domain
 
   try {
     // Fetch the average response time from the server
     const response = await fetch(`/average-response-time?domain=${domain}`);
     const data = await response.json();
 
-    // If successful, update the DOM with the result
+    // If successful, display the average response time on the website
     if (response.ok) {
       const avgTime = data.averageResponseTime;
       const responseTimeElement = document.getElementById('average-response-time');
@@ -132,5 +137,5 @@ async function fetchAverageResponseTime() {
 // Call the function to display the average response time on page load
 document.addEventListener('DOMContentLoaded', fetchAverageResponseTime);
 
-// Optional: Re-fetch when the domain is changed
+// Re-fetch when the domain is changed
 document.getElementById('domainSelect').addEventListener('change', fetchAverageResponseTime);
